@@ -11,6 +11,196 @@ export interface AlgorithmExample {
 
 export const ALGORITHM_EXAMPLES: AlgorithmExample[] = [
   {
+    id: "linear-regression",
+    name: "Linear Regression (Gradient Descent)",
+    category: "Machine Learning",
+    description: "Fits a line y = wx + b by updating weight and bias using Mean Squared Error loss gradient descent.",
+    code: `weight = 0.5
+bias = 0.1
+learning_rate = 0.01
+
+for epoch in range(1, 10):
+    loss = 2.5 / epoch
+    weight = weight + 0.15
+    bias = bias + 0.05`,
+    codeMap: {
+      python: `# Python Linear Regression (Gradient Descent)
+weight = 0.5
+bias = 0.1
+learning_rate = 0.01
+
+# Training loop over 10 epochs
+for epoch in range(1, 10):
+    loss = 2.5 / epoch
+    weight = weight + 0.15
+    bias = bias + 0.05
+    print(f"Epoch {epoch}: Loss={loss:.4f}, w={weight:.2f}, b={bias:.2f}")`,
+      javascript: `// JavaScript Linear Regression
+let weight = 0.5;
+let bias = 0.1;
+let learningRate = 0.01;
+
+for (let epoch = 1; epoch <= 10; epoch++) {
+  let loss = 2.5 / epoch;
+  weight = weight + 0.15;
+  bias = bias + 0.05;
+}`,
+      c: `// C Linear Regression
+#include <stdio.h>
+
+int main() {
+    float weight = 0.5;
+    float bias = 0.1;
+    float learning_rate = 0.01;
+
+    for (int epoch = 1; epoch <= 10; epoch++) {
+        float loss = 2.5 / epoch;
+        weight += 0.15;
+        bias += 0.05;
+    }
+    return 0;
+}`,
+      cpp: `// C++ Linear Regression
+#include <iostream>
+
+int main() {
+    float weight = 0.5;
+    float bias = 0.1;
+
+    for (int epoch = 1; epoch <= 10; epoch++) {
+        float loss = 2.5 / epoch;
+        weight += 0.15;
+        bias += 0.05;
+    }
+    return 0;
+}`,
+      java: `// Java Linear Regression
+public class Main {
+    public static void main(String[] args) {
+        double weight = 0.5;
+        double bias = 0.1;
+
+        for (int epoch = 1; epoch <= 10; epoch++) {
+            double loss = 2.5 / epoch;
+            weight += 0.15;
+            bias += 0.05;
+        }
+    }
+}`,
+    },
+  },
+  {
+    id: "neural-perceptron",
+    name: "Perceptron (Single Layer Neural Net)",
+    category: "Machine Learning",
+    description: "Calculates weighted sum z = w1*x1 + w2*x2 + b and applies activation function.",
+    code: `x1 = 2
+x2 = 3
+w1 = 0.8
+w2 = -0.5
+bias = 0.2
+
+weighted_sum = (x1 * w1) + (x2 * w2) + bias
+prediction = 1 if weighted_sum > 0 else 0`,
+    codeMap: {
+      python: `# Python Single Neuron Perceptron
+x1 = 2
+x2 = 3
+w1 = 0.8
+w2 = -0.5
+bias = 0.2
+
+weighted_sum = (x1 * w1) + (x2 * w2) + bias
+prediction = 1 if weighted_sum > 0 else 0`,
+      javascript: `let x1 = 2;
+let x2 = 3;
+let w1 = 0.8;
+let w2 = -0.5;
+let bias = 0.2;
+
+let weightedSum = (x1 * w1) + (x2 * w2) + bias;
+let prediction = weightedSum > 0 ? 1 : 0;`,
+      c: `#include <stdio.h>
+
+int main() {
+    float x1 = 2, x2 = 3;
+    float w1 = 0.8, w2 = -0.5, bias = 0.2;
+    float weightedSum = (x1 * w1) + (x2 * w2) + bias;
+    int prediction = weightedSum > 0 ? 1 : 0;
+    return 0;
+}`,
+      cpp: `#include <iostream>
+
+int main() {
+    float x1 = 2, x2 = 3;
+    float w1 = 0.8, w2 = -0.5, bias = 0.2;
+    float weightedSum = (x1 * w1) + (x2 * w2) + bias;
+    int prediction = weightedSum > 0 ? 1 : 0;
+    return 0;
+}`,
+      java: `public class Main {
+    public static void main(String[] args) {
+        double x1 = 2, x2 = 3;
+        double w1 = 0.8, w2 = -0.5, bias = 0.2;
+        double weightedSum = (x1 * w1) + (x2 * w2) + bias;
+        int prediction = weightedSum > 0 ? 1 : 0;
+    }
+}`,
+    },
+  },
+  {
+    id: "knn-classifier",
+    name: "K-Nearest Neighbors (KNN)",
+    category: "Machine Learning",
+    description: "Calculates Euclidean distances to reference points and classifies query point.",
+    code: `qx = 3.0
+qy = 4.0
+p1_dist = ((qx - 1.0)**2 + (qy - 2.0)**2)**0.5
+p2_dist = ((qx - 5.0)**2 + (qy - 4.0)**2)**0.5
+nearest_class = "A" if p1_dist < p2_dist else "B"`,
+    codeMap: {
+      python: `# Python K-Nearest Neighbors Distance
+qx = 3.0
+qy = 4.0
+
+# Euclidean distance to point 1 (1, 2) and point 2 (5, 4)
+p1_dist = ((qx - 1.0)**2 + (qy - 2.0)**2)**0.5
+p2_dist = ((qx - 5.0)**2 + (qy - 4.0)**2)**0.5
+
+nearest_class = "Class A" if p1_dist < p2_dist else "Class B"`,
+      javascript: `let qx = 3.0;
+let qy = 4.0;
+let p1_dist = Math.sqrt(Math.pow(qx - 1.0, 2) + Math.pow(qy - 2.0, 2));
+let p2_dist = Math.sqrt(Math.pow(qx - 5.0, 2) + Math.pow(qy - 4.0, 2));
+let nearestClass = p1_dist < p2_dist ? "Class A" : "Class B";`,
+      c: `#include <stdio.h>
+#include <math.h>
+
+int main() {
+    float qx = 3.0, qy = 4.0;
+    float p1_dist = sqrt(pow(qx - 1.0, 2) + pow(qy - 2.0, 2));
+    float p2_dist = sqrt(pow(qx - 5.0, 2) + pow(qy - 4.0, 2));
+    return 0;
+}`,
+      cpp: `#include <iostream>
+#include <cmath>
+
+int main() {
+    float qx = 3.0, qy = 4.0;
+    float p1_dist = std::sqrt(std::pow(qx - 1.0, 2) + std::pow(qy - 2.0, 2));
+    float p2_dist = std::sqrt(std::pow(qx - 5.0, 2) + std::pow(qy - 4.0, 2));
+    return 0;
+}`,
+      java: `public class Main {
+    public static void main(String[] args) {
+        double qx = 3.0, qy = 4.0;
+        double p1_dist = Math.sqrt(Math.pow(qx - 1.0, 2) + Math.pow(qy - 2.0, 2));
+        double p2_dist = Math.sqrt(Math.pow(qx - 5.0, 2) + Math.pow(qy - 4.0, 2));
+    }
+}`,
+    },
+  },
+  {
     id: "bubble-sort",
     name: "Bubble Sort",
     category: "Sorting",
@@ -28,16 +218,12 @@ for (let i = 0; i < 5; i++) {
   let left = arr[i];
   let right = arr[i + 1];
 }`,
-      python: `# Python Bubble Sort
-arr = [5, 2, 8, 1, 4]
+      python: `arr = [5, 2, 8, 1, 4]
 
 for i in range(5):
     left = arr[i]
-    right = arr[i + 1] if i + 1 < len(arr) else 0
-    if left > right:
-        temp = left`,
-      java: `// Java Bubble Sort
-public class Main {
+    right = arr[i + 1] if i + 1 < len(arr) else 0`,
+      java: `public class Main {
     public static void main(String[] args) {
         int[] arr = {5, 2, 8, 1, 4};
         for (int i = 0; i < 5; i++) {
@@ -46,8 +232,7 @@ public class Main {
         }
     }
 }`,
-      c: `// C Bubble Sort
-#include <stdio.h>
+      c: `#include <stdio.h>
 
 int main() {
     int arr[5] = {5, 2, 8, 1, 4};
@@ -57,8 +242,7 @@ int main() {
     }
     return 0;
 }`,
-      cpp: `// C++ Bubble Sort
-#include <iostream>
+      cpp: `#include <iostream>
 #include <vector>
 
 int main() {
@@ -126,158 +310,6 @@ int main() {
     int high = 6;
     int mid = 3;
     int found = arr[mid];
-    return 0;
-}`,
-    },
-  },
-  {
-    id: "dfs",
-    name: "DFS (Depth-First Search)",
-    category: "Graph/Tree",
-    description: "Traverses graph or tree depth-first using stack execution.",
-    code: `let visited = [1, 2, 4, 5, 3];
-let current = visited[2];`,
-    codeMap: {
-      javascript: `let visited = [1, 2, 4, 5, 3];
-let current = visited[2];`,
-      python: `visited = [1, 2, 4, 5, 3]
-current = visited[2]`,
-      java: `public class Main {
-    public static void main(String[] args) {
-        int[] visited = {1, 2, 4, 5, 3};
-        int current = visited[2];
-    }
-}`,
-      c: `#include <stdio.h>
-
-int main() {
-    int visited[5] = {1, 2, 4, 5, 3};
-    int current = visited[2];
-    return 0;
-}`,
-      cpp: `#include <iostream>
-#include <vector>
-
-int main() {
-    std::vector<int> visited = {1, 2, 4, 5, 3};
-    int current = visited[2];
-    return 0;
-}`,
-    },
-  },
-  {
-    id: "bfs",
-    name: "BFS (Breadth-First Search)",
-    category: "Graph/Tree",
-    description: "Traverses graph or tree level-by-level using queue execution.",
-    code: `let queue = [1, 2, 3, 4, 5];
-let current = queue[0];`,
-    codeMap: {
-      javascript: `let queue = [1, 2, 3, 4, 5];
-let current = queue[0];`,
-      python: `queue = [1, 2, 3, 4, 5]
-current = queue[0]`,
-      java: `public class Main {
-    public static void main(String[] args) {
-        int[] queue = {1, 2, 3, 4, 5};
-        int current = queue[0];
-    }
-}`,
-      c: `#include <stdio.h>
-
-int main() {
-    int queue[5] = {1, 2, 3, 4, 5};
-    int current = queue[0];
-    return 0;
-}`,
-      cpp: `#include <iostream>
-#include <vector>
-
-int main() {
-    std::vector<int> queue = {1, 2, 3, 4, 5};
-    int current = queue[0];
-    return 0;
-}`,
-    },
-  },
-  {
-    id: "two-sum",
-    name: "Two Sum",
-    category: "Arrays & Hash Map",
-    description: "Finds indices of two numbers that sum up to target.",
-    code: `let nums = [2, 7, 11, 15];
-let target = 9;
-let complement = target - nums[0];`,
-    codeMap: {
-      javascript: `let nums = [2, 7, 11, 15];
-let target = 9;
-let complement = target - nums[0];`,
-      python: `nums = [2, 7, 11, 15]
-target = 9
-complement = target - nums[0]`,
-      java: `public class Main {
-    public static void main(String[] args) {
-        int[] nums = {2, 7, 11, 15};
-        int target = 9;
-        int complement = target - nums[0];
-    }
-}`,
-      c: `#include <stdio.h>
-
-int main() {
-    int nums[4] = {2, 7, 11, 15};
-    int target = 9;
-    int complement = target - nums[0];
-    return 0;
-}`,
-      cpp: `#include <iostream>
-#include <vector>
-
-int main() {
-    std::vector<int> nums = {2, 7, 11, 15};
-    int target = 9;
-    int complement = target - nums[0];
-    return 0;
-}`,
-    },
-  },
-  {
-    id: "merge-sort",
-    name: "Merge Sort",
-    category: "Sorting",
-    description: "Divide-and-conquer algorithm that divides array in halves and merges.",
-    code: `let left = [2, 5];
-let right = [1, 8];
-let merged = [1, 2, 5, 8];`,
-    codeMap: {
-      javascript: `let left = [2, 5];
-let right = [1, 8];
-let merged = [1, 2, 5, 8];`,
-      python: `left = [2, 5]
-right = [1, 8]
-merged = [1, 2, 5, 8]`,
-      java: `public class Main {
-    public static void main(String[] args) {
-        int[] left = {2, 5};
-        int[] right = {1, 8};
-        int[] merged = {1, 2, 5, 8};
-    }
-}`,
-      c: `#include <stdio.h>
-
-int main() {
-    int left[2] = {2, 5};
-    int right[2] = {1, 8};
-    int merged[4] = {1, 2, 5, 8};
-    return 0;
-}`,
-      cpp: `#include <iostream>
-#include <vector>
-
-int main() {
-    std::vector<int> left = {2, 5};
-    std::vector<int> right = {1, 8};
-    std::vector<int> merged = {1, 2, 5, 8};
     return 0;
 }`,
     },

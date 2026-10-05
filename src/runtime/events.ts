@@ -107,6 +107,42 @@ export interface ConsoleLogged {
   line?: number;
 }
 
+// Machine Learning Event System
+export interface MLEpochStep {
+  type: "ML_EPOCH" | "ML_ITERATION";
+  id: string;
+  epoch: number;
+  totalEpochs: number;
+  loss: number;
+  weight: number;
+  bias: number;
+  learningRate?: number;
+  dataPoints?: Array<{ x: number; y: number }>;
+  line?: number;
+}
+
+export interface MLKMeansStep {
+  type: "ML_KMEANS";
+  id: string;
+  iteration: number;
+  centroids: Array<{ x: number; y: number }>;
+  clusters: Array<{ point: { x: number; y: number }; clusterIndex: number }>;
+  line?: number;
+}
+
+export interface MLNeuralStep {
+  type: "ML_NEURAL";
+  id: string;
+  inputs: number[];
+  weights: number[];
+  bias: number;
+  weightedSum: number;
+  activation: number;
+  prediction: number;
+  target?: number;
+  line?: number;
+}
+
 export type RuntimeEvent =
   | VariableCreated
   | VariableUpdated
@@ -118,4 +154,7 @@ export type RuntimeEvent =
   | ArrayAccessed
   | FunctionCalled
   | FunctionReturned
-  | ConsoleLogged;
+  | ConsoleLogged
+  | MLEpochStep
+  | MLKMeansStep
+  | MLNeuralStep;

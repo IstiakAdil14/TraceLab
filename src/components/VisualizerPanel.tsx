@@ -5,6 +5,7 @@ import { useExecutionStore } from "@/store/useExecutionStore";
 import { VariableCreated, VariableUpdated, VariableRead, ExpressionEvaluated, ConditionChecked, LoopIteration, ArrayCreated, ArrayAccessed, FunctionCalled, FunctionReturned, ConsoleLogged } from "@/runtime/events";
 import { motion } from "framer-motion";
 import { TreeView } from "@/visualizer/TreeView";
+import { MachineLearningView } from "@/visualizer/MachineLearningView";
 
 export function VisualizerPanel() {
   const events = useExecutionStore((state) => state.events);
@@ -37,6 +38,15 @@ export function VisualizerPanel() {
   }
 
   const variableEntries = Object.entries(activeVariables);
+
+  // Detect active ML model variables (weight, bias, loss, epoch)
+  const isMlActive =
+    "weight" in activeVariables ||
+    "bias" in activeVariables ||
+    "loss" in activeVariables ||
+    "epoch" in activeVariables ||
+    events.some((e) => e.type === "ML_EPOCH" || e.type === "ML_ITERATION");
+
 
   // Detect active array for sorting/searching visualizer
   const activeArray = Object.values(activeVariables).find((v) => Array.isArray(v.value))?.value as any[] | undefined;
@@ -102,6 +112,17 @@ export function VisualizerPanel() {
         {/* Decorative Grid Background */}
         <div className="absolute inset-0 bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:16px_16px] opacity-40 pointer-events-none" />
 
+        {/* Dynamic Machine Learning Visualizer */}
+        {isMlActive && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl z-10"
+          >
+            <MachineLearningView />
+          </motion.div>
+        )}
+
         {/* Dynamic Binary Tree Visualizer */}
         {activeTreeRoot && (
           <motion.div
@@ -112,6 +133,7 @@ export function VisualizerPanel() {
             <TreeView root={activeTreeRoot} />
           </motion.div>
         )}
+
 
         {/* Algorithm Bar Chart & Array Structure Visualizer */}
         {activeArray && Array.isArray(activeArray) && (

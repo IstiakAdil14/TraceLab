@@ -6,3 +6,4 @@ export { LinkedListView } from "./LinkedListView";
 export { TreeView } from "./TreeView";
 export { GraphView } from "./GraphView";
 export { HashMapView } from "./HashMapView";
+export { MachineLearningView } from "./MachineLearningView";

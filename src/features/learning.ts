@@ -24,6 +24,28 @@ export interface Lesson {
 
 export const LESSONS: Lesson[] = [
   {
+    id: "machine-learning",
+    title: "Machine Learning & Gradient Descent",
+    category: "Machine Learning",
+    explanation: "Machine Learning models optimize parameters (weight `w` & bias `b`) by calculating Mean Squared Error loss and updating weights in direction of negative gradient.",
+    code: `weight = 0.5\nbias = 0.1\nlearning_rate = 0.01\n\nfor epoch in range(1, 6):\n    loss = 2.5 / epoch\n    weight = weight + 0.15\n    bias = bias + 0.05\n`,
+    quiz: {
+      question: "What is the primary goal of Gradient Descent in Machine Learning?",
+      options: [
+        { id: 0, text: "To increase the dataset size" },
+        { id: 1, text: "To minimize the loss (error) by iteratively updating weights and bias" },
+        { id: 2, text: "To convert Python code into C" },
+      ],
+      correctOptionId: 1,
+      explanation: "Correct! Gradient Descent iteratively updates parameters to minimize loss/error.",
+    },
+    challenge: {
+      title: "Linear Regression Epochs",
+      description: "Run 5 training epochs of gradient descent updating weight `w` and bias `b`.",
+      targetCode: `weight = 0.5\nbias = 0.1\nfor epoch in range(1, 6):\n    loss = 2.5 / epoch\n    weight = weight + 0.15\n    bias = bias + 0.05\n`,
+    },
+  },
+  {
     id: "variables",
     title: "Variables & Memory Slots",
     category: "Fundamentals",
