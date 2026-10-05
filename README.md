@@ -1,7 +1,13 @@
-# 🚀 TraceLab — Visual Runtime Engine & Algorithm Platform
+# 🚀 TraceLab — Visual Runtime Engine & Machine Learning Platform
 
 <p align="center">
-  <b>An interactive, real-time code execution visualizer and algorithm learning engine supporting C, C++, Java, Python, and JavaScript.</b>
+  <b>An interactive, real-time code execution visualizer, Jupyter Notebook parser, and Machine Learning engine supporting C, C++, Java, Python, and JavaScript.</b>
+</p>
+
+<p align="center">
+  <a href="https://trace-lab-swart.vercel.app" target="_blank">
+    <img src="https://img.shields.io/badge/LIVE%20DEMO-trace--lab--swart.vercel.app-emerald?style=for-the-badge&logo=vercel" alt="Live Demo" />
+  </a>
 </p>
 
 <p align="center">
@@ -10,41 +16,52 @@
   <img src="https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Prisma-6.19-2D3748?style=for-the-badge&logo=prisma" alt="Prisma" />
   <img src="https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql" alt="PostgreSQL" />
-  <img src="https://img.shields.io/badge/TailwindCSS-v4-38B2AC?style=for-the-badge&logo=tailwind-css" alt="TailwindCSS" />
+  <img src="https://img.shields.io/badge/Jupyter-ipynb-orange?style=for-the-badge&logo=jupyter" alt="Jupyter" />
 </p>
+
+---
+
+## 🌐 Live Application
+Try TraceLab live in your browser: **[https://trace-lab-swart.vercel.app](https://trace-lab-swart.vercel.app)**
 
 ---
 
 ## 🌟 Key Features
 
-### 💻 1. Multi-Language Real-Time Execution Engine
+### 🧠 1. Machine Learning & Gradient Descent Visualizer Engine
+* **2D Feature Fitting Plot**: Real-time SVG 2D scatter plot rendering linear regression decision lines ($y = wx + b$) and residual error vectors.
+* **Epoch & Loss Dashboard**: Real-time tracking of **Epochs** (`1/10`), **MSE Loss** ($Loss = \frac{1}{n} \sum (y - \hat{y})^2$), **Weight ($w$)**, **Bias ($b$)**, and **Learning Rate ($\alpha$)**.
+* **Loss Reduction Mini Chart**: Epoch-by-epoch bar chart tracking gradient descent convergence towards minimum loss.
+* **Interactive ML Presets**: Pre-configured algorithm templates for **Linear Regression**, **Single-Layer Perceptron**, and **K-Nearest Neighbors (KNN)**.
+
+### 📘 2. Jupyter Notebook (`.ipynb`) Parser & Import System
+* **Native `.ipynb` Support**: Parses JSON structure of Jupyter Notebooks, extracts code cells (`cell_type: "code"`), and cleans notebook magic commands (`%matplotlib`, `!pip`).
+* **Instant File Import**: Toolbar button allowing one-click drag-and-drop import of `.ipynb` notebooks or `.py` Python scripts directly into Monaco Editor.
+
+### 💻 3. Multi-Language Real-Time Execution Engine
 * **Supported Languages**: **C**, **C++**, **Java**, **Python**, and **JavaScript**.
-* **Automatic Language Detection**: Smart code heuristic classifier automatically selects the active language mode, Monaco syntax highlighter, and parser tab on input.
+* **Automatic Language Detection**: Smart code heuristic classifier automatically selects active language mode, Monaco syntax highlighter, and parser tab on input.
 * **AST & Line Evaluation Engine**: Step-by-step timeline tracing for variable creations, assignments, arithmetic evaluation, conditions (`if`/`else`), loops (`for`/`while`), arrays, function calls, and recursion.
 
-### 📊 2. Dynamic Memory & Data Structure Visualizers
+### 📊 4. Dynamic Memory & Data Structure Visualizers
 * **Memory Slot Variables**: Real-time memory box cards tracking active variable names, current values, previous state changes, and line numbers.
 * **Array Index Map**: Aligned `Index` and `Value` rows with glowing active index highlights and mutation tracking (`arr[i] = x`).
 * **Call Stack & Recursion Cascade**: Stack frame visualizer tracking function parameters, depth growth, call chains (`add(add(1,2), 3)`), and return value unwinding (`factorial(4) → 24`).
 * **Visualizer Suite**: Specialized Canvas & SVG renderers for **Arrays**, **Stacks**, **Queues**, **Linked Lists**, **Trees**, **Graphs**, and **Hash Maps**.
 
-### ⏱️ 3. Execution Timeline Controls
+### ⏱️ 5. Execution Timeline Controls
 * **Step Controls**: **Play**, **Pause**, **Step Forward**, **Step Backward**, and **Reset**.
 * **Scrubbing Slider**: Drag or click along the timeline bar to jump directly to any step in execution history.
 * **Speed Selectors**: Configurable playback speeds (`0.5x`, `1x`, `2x`).
 
-### 👤 4. User Accounts & OAuth Authentication (Phase 18)
+### 👤 6. User Accounts & OAuth Authentication (Phase 18)
 * **OAuth Login**: Seamless **Google Login** and **GitHub Login** via NextAuth.js.
 * **Gamified Progress Tracking**: Earn **XP** (+50 XP per lesson), level up developer ranks (`Lvl = ⌊XP / 100⌋ + 1`), and track completed lessons.
 * **Achievements**: Unlock achievement badges (*"First Step"*, *"Algorithm Explorer"*) stored under user profile modals.
 
-### 🗄️ 5. PostgreSQL & Prisma Database (Phase 19)
+### 🗄️ 7. PostgreSQL & Prisma Database (Phase 19)
 * **OR Mapping**: Prisma ORM schema mapping **Users**, **Accounts**, **Sessions**, **Lessons**, **Progress**, and **Achievements**.
-* **Database Driver**: Direct native PostgreSQL pool (`pg`) integration with full migration support.
-
-### 🎓 6. Guided Learning & Algorithm Presets
-* **Pre-built Lessons**: Binary Search, Bubble Sort, Quick Sort, Factorial Recursion, BFS/DFS Tree Traversals.
-* **Interactive Code Injection**: Load preset code directly into the editor with explanation cards and quizzes.
+* **Database Driver**: Supabase PostgreSQL backing database with connection pooler and direct URL fallback.
 
 ---
 
@@ -52,17 +69,18 @@
 
 ```mermaid
 graph TD
-    A[Monaco Code Editor] -->|Raw Code Input| B[Language Auto-Detector]
-    B -->|C / C++ / Java / Py / JS| C[Multi-Language Parser]
-    C -->|Parse AST & Line Traces| D[Runtime Execution Engine]
+    A[Monaco Editor / .ipynb Import] -->|Raw Code / Jupyter JSON| B[Language Auto-Detector & ipynb Parser]
+    B -->|C / C++ / Java / Py / JS| C[Multi-Language Parser Engine]
+    C -->|Parse AST & ML Epoch Traces| D[Runtime Execution Engine]
     D -->|Emit Step Events| E[Zustand Execution Store]
     E -->|Timeline Events| F[Timeline Controls & Slider]
     E -->|State Snapshots| G[Visualizer Panel]
-    G --> H[Memory Slots]
-    G --> I[Array Index Grid]
-    G --> J[Recursion Stack Cascade]
-    G --> K[Trees / Graphs / Linked Lists]
-    E -->|Lesson Complete| L[NextAuth API & PostgreSQL Prisma DB]
+    G --> H[2D Machine Learning Canvas & Loss Chart]
+    G --> I[Memory Slots]
+    G --> J[Array Index Grid]
+    G --> K[Recursion Stack Cascade]
+    G --> L[Trees / Graphs / Data Structures]
+    E -->|Lesson Complete| M[NextAuth API & Supabase PostgreSQL DB]
 ```
 
 ---
@@ -98,9 +116,9 @@ TraceLab core engine has been verified against 17 execution test cases:
 * **Framework**: [Next.js 16.3.8 (App Router)](https://nextjs.org/)
 * **UI & Styling**: [React 19](https://react.dev/), [Tailwind CSS v4](https://tailwindcss.com/), [Lucide React Icons](https://lucide.dev/)
 * **Code Editor**: [@monaco-editor/react](https://github.com/sueyont/monaco-react)
-* **AST Parsers**: `@babel/parser`, `@babel/traverse`, custom Multi-Language Regex/AST Evaluator
+* **Parsers**: `@babel/parser`, `@babel/traverse`, Jupyter `.ipynb` JSON Parser, Multi-Language Regex/AST Evaluator
 * **State Management**: [Zustand](https://github.com/pmndrs/zustand)
-* **Database & ORM**: [Prisma ORM](https://www.prisma.io/), [PostgreSQL](https://www.postgresql.org/), `pg` Pool
+* **Database & ORM**: [Prisma ORM](https://www.prisma.io/), [Supabase PostgreSQL](https://supabase.com/), `pg` Pool
 * **Authentication**: [NextAuth.js](https://next-auth.js.org/) with `@auth/prisma-adapter`
 
 ---
@@ -111,7 +129,7 @@ TraceLab core engine has been verified against 17 execution test cases:
 Ensure you have the following installed:
 * **Node.js** v20+ 
 * **npm** or **pnpm**
-* **PostgreSQL** database (optional for local mock auth testing)
+* **PostgreSQL** or **Supabase** database
 
 ### 2. Clone the Repository
 ```bash
@@ -131,18 +149,22 @@ cp .env.example .env.local
 ```
 Fill in your credentials in `.env.local`:
 ```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/tracelab?schema=public"
+DATABASE_URL="postgresql://postgres.xxx:PASSWORD@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres.xxx:PASSWORD@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres"
+
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="your-super-secret-key"
+
 GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
 GITHUB_CLIENT_ID="your-github-client-id"
 GITHUB_CLIENT_SECRET="your-github-client-secret"
 ```
 
-### 5. Generate Prisma Client
+### 5. Generate Prisma Client & Push DB
 ```bash
 npx prisma generate
+npx prisma db push
 ```
 
 ### 6. Run Development Server
