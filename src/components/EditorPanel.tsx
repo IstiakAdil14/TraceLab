@@ -23,15 +23,17 @@ export function EditorPanel({ externalCode }: EditorPanelProps) {
 
   const [code, setCode] = useState<string>(
     externalCode ||
-      `# Machine Learning & Code Execution Mode
-weight = 0.5
-bias = 0.1
-learning_rate = 0.01
+      `// C TraceLab Execution
+#include <stdio.h>
 
-for epoch in range(1, 6):
-    loss = 2.5 / epoch
-    weight = weight + 0.15
-    bias = bias + 0.05
+int main() {
+    printf("Greetings! Welcome to TraceLab!\\n");
+    int status = 1;
+    if (status == 1) {
+        printf("Ready to visualize your code step-by-step.\\n");
+    }
+    return 0;
+}
 `
   );
 

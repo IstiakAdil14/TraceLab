@@ -75,13 +75,10 @@ public class Main {
 #include <stdio.h>
 
 int main() {
-    int arr[5] = {5, 2, 8, 1, 4};
-    for (int i = 0; i < 5; i++) {
-        int left = arr[i];
-        int right = arr[i + 1];
-        if (left > right) {
-            int temp = left;
-        }
+    printf("Greetings! Welcome to TraceLab!\\n");
+    int status = 1;
+    if (status == 1) {
+        printf("Ready to visualize your code step-by-step.\\n");
     }
     return 0;
 }

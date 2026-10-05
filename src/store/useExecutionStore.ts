@@ -27,7 +27,7 @@ export const useExecutionStore = create<ExecutionStoreState>((set, get) => ({
   currentStepIndex: -1,
   isPlaying: false,
   playbackSpeed: 800,
-  selectedLanguage: "javascript",
+  selectedLanguage: "c",
 
   setSelectedLanguage: (selectedLanguage: SupportedLanguage) => {
     set({ selectedLanguage });
