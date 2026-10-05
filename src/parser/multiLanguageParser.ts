@@ -1215,7 +1215,10 @@ function evaluateExpressionStr(
   if (!cleaned) return undefined;
   if (cleaned.startsWith('"') && cleaned.endsWith('"')) return cleaned.slice(1, -1);
   if (cleaned.startsWith("'") && cleaned.endsWith("'")) return cleaned.slice(1, -1);
-  if (!isNaN(Number(cleaned))) return Number(cleaned);
+
+  // Handle C/C++/Java float literal suffix e.g. 0.15f, 0.05f -> 0.15, 0.05
+  const floatCleaned = cleaned.replace(/f$/i, "");
+  if (!isNaN(Number(floatCleaned))) return Number(floatCleaned);
 
   // Safety check against recursion stack overflow
   if (parentStack.length > MAX_RECURSION_DEPTH) {
