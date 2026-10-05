@@ -93,6 +93,23 @@ for epoch in range(1, 6):
 
   const handleCodeChange = (newCode: string | undefined) => {
     const updated = newCode || "";
+
+    // Check if user pasted raw Jupyter Notebook (.ipynb) JSON content directly into editor
+    if (updated.trim().startsWith("{") && updated.includes('"cells"')) {
+      try {
+        const parsed = parseJupyterNotebook(updated);
+        if (parsed.code && !parsed.code.startsWith("# Error")) {
+          setCode(parsed.code);
+          setSelectedLanguage("python");
+          setAutoDetect(false);
+          setImportedFileName("pasted_notebook.ipynb");
+          return;
+        }
+      } catch (err) {
+        // Fall through if not valid JSON
+      }
+    }
+
     setCode(updated);
 
     if (selectedAlgo !== "") {
