@@ -664,226 +664,611 @@ export function parseCodeByLanguage(code: string, language: SupportedLanguage): 
     return false;
   };
 
+  // Helper to count leading spaces/tabs for Python indentation
+  const countLeadingSpaces = (str: string): number => {
+    let count = 0;
+    for (let i = 0; i < str.length; i++) {
+      if (str[i] === " ") count += 1;
+      else if (str[i] === "\t") count += 4;
+      else break;
+    }
+    return count;
+  };
+
+  // Helper to collect Python if / elif / else branches
+  const collectPythonIfBranches = (
+    items: { lineText: string; lineNum: number }[],
+    startIdx: number
+  ) => {
+    const branches: { condition: string | null; lineNum: number; bodyLines: { lineText: string; lineNum: number }[] }[] = [];
+    const baseLine = items[startIdx].lineText;
+    const baseIndent = countLeadingSpaces(baseLine);
+    let lookAhead = startIdx;
+
+    while (lookAhead < items.length) {
+      const rawLine = items[lookAhead].lineText;
+      const line = rawLine.trim();
+      if (!line) {
+        lookAhead++;
+        continue;
+      }
+
+      const indent = countLeadingSpaces(rawLine);
+      if (lookAhead > startIdx && indent < baseIndent) break;
+
+      if (lookAhead === startIdx) {
+        const match = line.match(/^if\s+(.+):?$/);
+        if (match) {
+          const cond = match[1].replace(/:$/, "").trim();
+          const bodyLines: { lineText: string; lineNum: number }[] = [];
+          lookAhead++;
+          while (lookAhead < items.length) {
+            const nextRaw = items[lookAhead].lineText;
+            if (nextRaw.trim() && countLeadingSpaces(nextRaw) > baseIndent) {
+              bodyLines.push(items[lookAhead]);
+              lookAhead++;
+            } else {
+              break;
+            }
+          }
+          branches.push({ condition: cond, lineNum: items[startIdx].lineNum, bodyLines });
+        } else {
+          break;
+        }
+      } else if (indent === baseIndent) {
+        const elifMatch = line.match(/^elif\s+(.+):?$/);
+        const elseMatch = line.match(/^else:?$/);
+
+        if (elifMatch) {
+          const cond = elifMatch[1].replace(/:$/, "").trim();
+          const lineNum = items[lookAhead].lineNum;
+          const bodyLines: { lineText: string; lineNum: number }[] = [];
+          lookAhead++;
+          while (lookAhead < items.length) {
+            const nextRaw = items[lookAhead].lineText;
+            if (nextRaw.trim() && countLeadingSpaces(nextRaw) > baseIndent) {
+              bodyLines.push(items[lookAhead]);
+              lookAhead++;
+            } else {
+              break;
+            }
+          }
+          branches.push({ condition: cond, lineNum, bodyLines });
+        } else if (elseMatch) {
+          const lineNum = items[lookAhead].lineNum;
+          const bodyLines: { lineText: string; lineNum: number }[] = [];
+          lookAhead++;
+          while (lookAhead < items.length) {
+            const nextRaw = items[lookAhead].lineText;
+            if (nextRaw.trim() && countLeadingSpaces(nextRaw) > baseIndent) {
+              bodyLines.push(items[lookAhead]);
+              lookAhead++;
+            } else {
+              break;
+            }
+          }
+          branches.push({ condition: null, lineNum, bodyLines });
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+
+    return { branches, nextIdx: lookAhead };
+  };
+
+  // Helper to collect C / C++ / Java if / else if / else branches
+  const collectCIfBranches = (
+    items: { lineText: string; lineNum: number }[],
+    startIdx: number
+  ) => {
+    const branches: { condition: string | null; lineNum: number; bodyLines: { lineText: string; lineNum: number }[] }[] = [];
+    let currIdx = startIdx;
+    const workingItems = [...items];
+
+    while (currIdx < workingItems.length) {
+      const rawLine = workingItems[currIdx].lineText;
+      const line = rawLine.trim();
+      if (!line) {
+        currIdx++;
+        continue;
+      }
+
+      let condition: string | null = null;
+      let isIf = false;
+      let isElseIf = false;
+      let isElse = false;
+
+      if (currIdx === startIdx) {
+        const match = line.match(/^if\s*\((.+)\)/);
+        if (match) {
+          isIf = true;
+          condition = match[1];
+        } else {
+          break;
+        }
+      } else {
+        const cleanLine = line.replace(/^}\s*/, "");
+        const elseIfMatch = cleanLine.match(/^else\s+if\s*\((.+)\)/);
+        const elseMatch = cleanLine.match(/^else(?:\s*\{|\s+|$)/);
+
+        if (elseIfMatch) {
+          isElseIf = true;
+          condition = elseIfMatch[1];
+        } else if (elseMatch) {
+          isElse = true;
+          condition = null;
+        } else {
+          break;
+        }
+      }
+
+      const bodyLines: { lineText: string; lineNum: number }[] = [];
+      const lineNum = workingItems[currIdx].lineNum;
+
+      let hasBrace = line.includes("{");
+      let braceScanIdx = currIdx;
+
+      if (!hasBrace && currIdx + 1 < workingItems.length) {
+        const nextLineTrim = workingItems[currIdx + 1].lineText.trim();
+        if (nextLineTrim.startsWith("{")) {
+          hasBrace = true;
+          braceScanIdx = currIdx + 1;
+        }
+      }
+
+      if (hasBrace) {
+        let depth = 0;
+        let scan = braceScanIdx;
+        let done = false;
+
+        while (scan < workingItems.length && !done) {
+          const item = workingItems[scan];
+          const itemText = item.lineText.trim();
+
+          for (let cIdx = 0; cIdx < itemText.length; cIdx++) {
+            const char = itemText[cIdx];
+            if (char === "{") {
+              depth++;
+            } else if (char === "}") {
+              depth--;
+              if (depth === 0) {
+                const afterBrace = itemText.slice(cIdx + 1).trim();
+                done = true;
+
+                if (afterBrace.startsWith("else")) {
+                  workingItems[scan] = {
+                    lineText: afterBrace,
+                    lineNum: item.lineNum,
+                  };
+                  currIdx = scan;
+                } else {
+                  currIdx = scan + 1;
+                }
+                break;
+              }
+            }
+          }
+
+          if (!done) {
+            if (scan !== currIdx || itemText.includes("{")) {
+              let codeContent = itemText;
+              if (scan === currIdx) {
+                const bracePos = codeContent.indexOf("{");
+                if (bracePos !== -1) {
+                  codeContent = codeContent.slice(bracePos + 1).trim();
+                }
+              }
+              if (depth === 0) {
+                const closePos = codeContent.lastIndexOf("}");
+                if (closePos !== -1) {
+                  codeContent = codeContent.slice(0, closePos).trim();
+                }
+              }
+              if (
+                codeContent &&
+                codeContent !== "{" &&
+                codeContent !== "}" &&
+                !codeContent.startsWith("if ") &&
+                !codeContent.startsWith("else")
+              ) {
+                bodyLines.push({ lineText: codeContent, lineNum: item.lineNum });
+              }
+            }
+            scan++;
+          }
+        }
+
+        if (!done) {
+          currIdx = scan;
+        }
+      } else {
+        const cleanHeader = line.replace(/^}\s*/, "");
+        let stmtAfterCond = "";
+        if (isIf) {
+          stmtAfterCond = cleanHeader.replace(/^if\s*\((.+)\)/, "").replace(/^;\s*/, "").trim();
+        } else if (isElseIf) {
+          stmtAfterCond = cleanHeader.replace(/^else\s+if\s*\((.+)\)/, "").replace(/^;\s*/, "").trim();
+        } else if (isElse) {
+          stmtAfterCond = cleanHeader.replace(/^else/, "").replace(/^;\s*/, "").trim();
+        }
+
+        if (stmtAfterCond && stmtAfterCond !== ";" && !stmtAfterCond.startsWith("else")) {
+          bodyLines.push({ lineText: stmtAfterCond, lineNum });
+          currIdx++;
+        } else if (currIdx + 1 < workingItems.length) {
+          const nextItem = workingItems[currIdx + 1];
+          bodyLines.push({ lineText: nextItem.lineText.trim(), lineNum: nextItem.lineNum });
+          currIdx += 2;
+        } else {
+          currIdx++;
+        }
+      }
+
+      branches.push({ condition, lineNum, bodyLines });
+    }
+
+    return { branches, nextIdx: currIdx };
+  };
+
+  // Unified statement line range executor supporting nested loops, conditionals, and returns
+  const executeLinesRange = (
+    items: { lineText: string; lineNum: number }[],
+    currentEnv: Record<string, any>
+  ): { returnVal?: any; hasReturned?: boolean } => {
+    let idx = 0;
+
+    while (idx < items.length) {
+      const item = items[idx];
+      const lineNum = item.lineNum;
+      if (skipLines.has(lineNum)) {
+        idx++;
+        continue;
+      }
+
+      const rawLine = item.lineText;
+      const line = rawLine.trim();
+      if (
+        !line ||
+        line === "{" ||
+        line === "}" ||
+        line === "return 0;" ||
+        line.startsWith("#include") ||
+        line.startsWith("using namespace") ||
+        line.startsWith("public class") ||
+        line.startsWith("package")
+      ) {
+        idx++;
+        continue;
+      }
+
+      // Check for return statement
+      if (line.startsWith("return ") || line === "return;") {
+        const retExpr = line.replace(/^return\s+/, "").replace(/;$/, "").trim();
+        let returnVal: any = undefined;
+        if (retExpr && retExpr !== "0") {
+          returnVal = evaluateExpressionStr(
+            retExpr,
+            currentEnv,
+            (op, left, right, res) => {
+              events.push({
+                id: generateId(),
+                line: lineNum,
+                type: op === "+" ? "ADD" : op === "-" ? "SUB" : op === "*" ? "MUL" : op === "/" ? "DIV" : "OPERATION",
+                expression: `${left} ${op} ${right}`,
+                operator: op,
+                left,
+                right,
+                result: res,
+              });
+            },
+            arrays,
+            undefined,
+            functionRegistry,
+            events,
+            generateId,
+            lineNum
+          );
+        }
+        events.push({
+          id: generateId(),
+          line: lineNum,
+          type: "RETURN_FUNCTION",
+          name: "function",
+          returnValue: returnVal,
+        });
+        return { returnVal, hasReturned: true };
+      }
+
+      // --- Python Loops ---
+      if (language === "python") {
+        const pyLoopMatch = line.match(/^for\s+([a-zA-Z_]\w*)\s+in\s+range\((.+)\):?$/);
+        if (pyLoopMatch) {
+          const varName = pyLoopMatch[1];
+          const rangeArg = pyLoopMatch[2].split(",").map((s) => s.trim());
+          let maxIt = 5;
+          if (rangeArg.length === 1) maxIt = isNaN(Number(rangeArg[0])) ? 5 : Number(rangeArg[0]);
+          else if (rangeArg.length >= 2) maxIt = isNaN(Number(rangeArg[1])) ? 5 : Number(rangeArg[1]);
+
+          const bodyLines: { lineText: string; lineNum: number }[] = [];
+          let lookAhead = idx + 1;
+          const baseIndent = countLeadingSpaces(rawLine);
+          while (lookAhead < items.length) {
+            const nextRaw = items[lookAhead].lineText;
+            if (nextRaw.trim() && countLeadingSpaces(nextRaw) > baseIndent) {
+              bodyLines.push(items[lookAhead]);
+              lookAhead++;
+            } else {
+              break;
+            }
+          }
+
+          for (let iter = 0; iter < Math.min(maxIt, 50); iter++) {
+            currentEnv[varName] = iter;
+            events.push({
+              id: generateId(),
+              line: lineNum,
+              type: "LOOP_ITERATION",
+              iteration: iter + 1,
+              maxIterations: maxIt,
+              progressPercent: Math.min(100, Math.round(((iter + 1) / maxIt) * 100)),
+              variableName: varName,
+              variableValue: iter,
+              conditionText: `${varName} < ${maxIt}`,
+            });
+
+            const res = executeLinesRange(bodyLines, currentEnv);
+            if (res.hasReturned) return res;
+          }
+
+          idx = lookAhead;
+          continue;
+        }
+
+        const pyWhileMatch = line.match(/^while\s+(.+):?$/);
+        if (pyWhileMatch) {
+          const condStr = pyWhileMatch[1].replace(/:$/, "").trim();
+          const bodyLines: { lineText: string; lineNum: number }[] = [];
+          let lookAhead = idx + 1;
+          const baseIndent = countLeadingSpaces(rawLine);
+          while (lookAhead < items.length) {
+            const nextRaw = items[lookAhead].lineText;
+            if (nextRaw.trim() && countLeadingSpaces(nextRaw) > baseIndent) {
+              bodyLines.push(items[lookAhead]);
+              lookAhead++;
+            } else {
+              break;
+            }
+          }
+
+          let loopCount = 0;
+          const SAFETY_LIMIT = 50;
+          while (loopCount < SAFETY_LIMIT) {
+            const condDetails = parseConditionDetails(condStr, currentEnv);
+            events.push({
+              id: generateId(),
+              line: lineNum,
+              type: "CHECK_CONDITION",
+              condition: condDetails.conditionText,
+              left: condDetails.left,
+              operator: condDetails.op,
+              right: condDetails.right,
+              result: condDetails.result,
+              branchTaken: condDetails.result ? "then" : "else",
+            });
+
+            if (!condDetails.result) break;
+
+            loopCount++;
+            const res = executeLinesRange(bodyLines, currentEnv);
+            if (res.hasReturned) return res;
+          }
+
+          idx = lookAhead;
+          continue;
+        }
+
+        // --- Python If / Elif / Else Chains ---
+        const pyIfMatch = line.match(/^if\s+(.+):?$/);
+        if (pyIfMatch) {
+          const { branches, nextIdx } = collectPythonIfBranches(items, idx);
+          let executed = false;
+
+          for (const branch of branches) {
+            if (branch.condition) {
+              const condDetails = parseConditionDetails(branch.condition, currentEnv);
+              events.push({
+                id: generateId(),
+                line: branch.lineNum,
+                type: "CHECK_CONDITION",
+                condition: condDetails.conditionText,
+                left: condDetails.left,
+                operator: condDetails.op,
+                right: condDetails.right,
+                result: condDetails.result,
+                branchTaken: condDetails.result ? "then" : "else",
+              });
+
+              if (condDetails.result && !executed) {
+                executed = true;
+                const res = executeLinesRange(branch.bodyLines, currentEnv);
+                if (res.hasReturned) return res;
+              }
+            } else {
+              if (!executed) {
+                executed = true;
+                const res = executeLinesRange(branch.bodyLines, currentEnv);
+                if (res.hasReturned) return res;
+              }
+            }
+          }
+
+          idx = nextIdx;
+          continue;
+        }
+      }
+
+      // --- C / C++ / Java Loops & Conditionals ---
+      if (language === "c" || language === "cpp" || language === "java") {
+        const forMatch = line.match(/^for\s*\(\s*(?:int\s+)?([a-zA-Z_]\w*)\s*=\s*(\d+);\s*\1\s*<\s*(\d+);\s*.*\)/);
+        if (forMatch) {
+          const varName = forMatch[1];
+          const startVal = Number(forMatch[2]);
+          const maxIt = Number(forMatch[3]);
+
+          const bodyLines: { lineText: string; lineNum: number }[] = [];
+          let lookAhead = idx + 1;
+          let depth = 0;
+          let foundBrace = false;
+
+          while (lookAhead < items.length) {
+            const nextRaw = items[lookAhead].lineText;
+            const nextTrim = nextRaw.trim();
+
+            if (nextTrim === "{") {
+              foundBrace = true;
+              depth++;
+            } else if (nextTrim === "}") {
+              depth--;
+              if (foundBrace && depth === 0) {
+                lookAhead++;
+                break;
+              }
+            } else if (nextTrim) {
+              bodyLines.push(items[lookAhead]);
+            }
+            lookAhead++;
+          }
+
+          for (let iter = startVal; iter < Math.min(maxIt, 50); iter++) {
+            currentEnv[varName] = iter;
+            events.push({
+              id: generateId(),
+              line: lineNum,
+              type: "LOOP_ITERATION",
+              iteration: iter - startVal + 1,
+              maxIterations: maxIt - startVal,
+              progressPercent: Math.min(100, Math.round(((iter - startVal + 1) / (maxIt - startVal)) * 100)),
+              variableName: varName,
+              variableValue: iter,
+              conditionText: `${varName} < ${maxIt}`,
+            });
+
+            const res = executeLinesRange(bodyLines, currentEnv);
+            if (res.hasReturned) return res;
+          }
+
+          idx = lookAhead;
+          continue;
+        }
+
+        const whileMatch = line.match(/^while\s*\((.+)\)/);
+        if (whileMatch) {
+          const condStr = whileMatch[1];
+          const bodyLines: { lineText: string; lineNum: number }[] = [];
+          let lookAhead = idx + 1;
+          let depth = 0;
+          let foundBrace = false;
+
+          while (lookAhead < items.length) {
+            const nextRaw = items[lookAhead].lineText;
+            const nextTrim = nextRaw.trim();
+
+            if (nextTrim === "{") {
+              foundBrace = true;
+              depth++;
+            } else if (nextTrim === "}") {
+              depth--;
+              if (foundBrace && depth === 0) {
+                lookAhead++;
+                break;
+              }
+            } else if (nextTrim) {
+              bodyLines.push(items[lookAhead]);
+            }
+            lookAhead++;
+          }
+
+          let loopCount = 0;
+          const SAFETY_LIMIT = 50;
+          while (loopCount < SAFETY_LIMIT) {
+            const condDetails = parseConditionDetails(condStr, currentEnv);
+            events.push({
+              id: generateId(),
+              line: lineNum,
+              type: "CHECK_CONDITION",
+              condition: condDetails.conditionText,
+              left: condDetails.left,
+              operator: condDetails.op,
+              right: condDetails.right,
+              result: condDetails.result,
+              branchTaken: condDetails.result ? "then" : "else",
+            });
+
+            if (!condDetails.result) break;
+
+            loopCount++;
+            const res = executeLinesRange(bodyLines, currentEnv);
+            if (res.hasReturned) return res;
+          }
+
+          idx = lookAhead;
+          continue;
+        }
+
+        // --- C / C++ / Java If / Else If / Else Chains ---
+        const cIfMatch = line.match(/^if\s*\((.+)\)/);
+        if (cIfMatch) {
+          const { branches, nextIdx } = collectCIfBranches(items, idx);
+          let executed = false;
+
+          for (const branch of branches) {
+            if (branch.condition) {
+              const condDetails = parseConditionDetails(branch.condition, currentEnv);
+              events.push({
+                id: generateId(),
+                line: branch.lineNum,
+                type: "CHECK_CONDITION",
+                condition: condDetails.conditionText,
+                left: condDetails.left,
+                operator: condDetails.op,
+                right: condDetails.right,
+                result: condDetails.result,
+                branchTaken: condDetails.result ? "then" : "else",
+              });
+
+              if (condDetails.result && !executed) {
+                executed = true;
+                const res = executeLinesRange(branch.bodyLines, currentEnv);
+                if (res.hasReturned) return res;
+              }
+            } else {
+              if (!executed) {
+                executed = true;
+                const res = executeLinesRange(branch.bodyLines, currentEnv);
+                if (res.hasReturned) return res;
+              }
+            }
+          }
+
+          idx = nextIdx;
+          continue;
+        }
+      }
+
+      // Default single line execution
+      executeSingleLine(rawLine, lineNum, currentEnv);
+      idx++;
+    }
+
+    return {};
+  };
+
   // Main Parsing Loop over lines
-  for (let idx = 0; idx < lines.length; idx++) {
-    const lineNum = idx + 1;
-    if (skipLines.has(lineNum)) continue;
-
-    const rawLine = lines[idx];
-    const line = rawLine.trim();
-    if (!line) continue;
-
-    // --- Check Python For / While Loops ---
-    if (language === "python") {
-      const pyLoopMatch = line.match(/^for\s+([a-zA-Z_]\w*)\s+in\s+range\((.+)\):?$/);
-      if (pyLoopMatch) {
-        const varName = pyLoopMatch[1];
-        const rangeArg = pyLoopMatch[2].split(",").map((s) => s.trim());
-        let maxIt = 5;
-        if (rangeArg.length === 1) maxIt = isNaN(Number(rangeArg[0])) ? 5 : Number(rangeArg[0]);
-        else if (rangeArg.length >= 2) maxIt = isNaN(Number(rangeArg[1])) ? 5 : Number(rangeArg[1]);
-
-        // Collect indented body lines
-        const bodyLines: { lineText: string; lineNum: number }[] = [];
-        let lookAhead = idx + 1;
-        while (lookAhead < lines.length) {
-          const nextRaw = lines[lookAhead];
-          const nextTrim = nextRaw.trim();
-          if (nextTrim && (nextRaw.startsWith(" ") || nextRaw.startsWith("\t"))) {
-            bodyLines.push({ lineText: nextTrim, lineNum: lookAhead + 1 });
-            lookAhead++;
-          } else {
-            break;
-          }
-        }
-
-        // Execute loop iterations
-        for (let iter = 0; iter < Math.min(maxIt, 50); iter++) {
-          env[varName] = iter;
-          events.push({
-            id: generateId(),
-            line: lineNum,
-            type: "LOOP_ITERATION",
-            iteration: iter + 1,
-            maxIterations: maxIt,
-            progressPercent: Math.min(100, Math.round(((iter + 1) / maxIt) * 100)),
-            variableName: varName,
-            variableValue: iter,
-            conditionText: `${varName} < ${maxIt}`,
-          });
-
-          bodyLines.forEach((b) => executeSingleLine(b.lineText, b.lineNum, env));
-        }
-
-        idx = lookAhead - 1;
-        continue;
-      }
-
-      const pyWhileMatch = line.match(/^while\s+(.+):?$/);
-      if (pyWhileMatch) {
-        const condStr = pyWhileMatch[1].replace(/:$/, "").trim();
-
-        // Collect indented body lines
-        const bodyLines: { lineText: string; lineNum: number }[] = [];
-        let lookAhead = idx + 1;
-        while (lookAhead < lines.length) {
-          const nextRaw = lines[lookAhead];
-          const nextTrim = nextRaw.trim();
-          if (nextTrim && (nextRaw.startsWith(" ") || nextRaw.startsWith("\t"))) {
-            bodyLines.push({ lineText: nextTrim, lineNum: lookAhead + 1 });
-            lookAhead++;
-          } else {
-            break;
-          }
-        }
-
-        // Execute while iterations with condition checking
-        let loopCount = 0;
-        const SAFETY_LIMIT = 50;
-
-        while (loopCount < SAFETY_LIMIT) {
-          const condDetails = parseConditionDetails(condStr, env);
-
-          events.push({
-            id: generateId(),
-            line: lineNum,
-            type: "CHECK_CONDITION",
-            condition: condDetails.conditionText,
-            left: condDetails.left,
-            operator: condDetails.op,
-            right: condDetails.right,
-            result: condDetails.result,
-            branchTaken: condDetails.result ? "then" : "else",
-          });
-
-          if (!condDetails.result) break;
-
-          loopCount++;
-          bodyLines.forEach((b) => executeSingleLine(b.lineText, b.lineNum, env));
-        }
-
-        idx = lookAhead - 1;
-        continue;
-      }
-    }
-
-    // --- Check C / C++ / Java Loop Headers (for & while) ---
-    if (language === "c" || language === "cpp" || language === "java") {
-      const forMatch = line.match(/^for\s*\(\s*(?:int\s+)?([a-zA-Z_]\w*)\s*=\s*(\d+);\s*\1\s*<\s*(\d+);\s*.*\)/);
-      if (forMatch) {
-        const varName = forMatch[1];
-        const startVal = Number(forMatch[2]);
-        const maxIt = Number(forMatch[3]);
-
-        // Collect block body lines enclosed in { ... }
-        const bodyLines: { lineText: string; lineNum: number }[] = [];
-        let lookAhead = idx + 1;
-        let depth = 0;
-        let foundBrace = false;
-
-        while (lookAhead < lines.length) {
-          const nextRaw = lines[lookAhead];
-          const nextTrim = nextRaw.trim();
-
-          if (nextTrim === "{") {
-            foundBrace = true;
-            depth++;
-          } else if (nextTrim === "}") {
-            depth--;
-            if (foundBrace && depth === 0) {
-              lookAhead++;
-              break;
-            }
-          } else if (nextTrim) {
-            bodyLines.push({ lineText: nextTrim, lineNum: lookAhead + 1 });
-          }
-          lookAhead++;
-        }
-
-        // Execute loop iterations
-        for (let iter = startVal; iter < Math.min(maxIt, 50); iter++) {
-          env[varName] = iter;
-          events.push({
-            id: generateId(),
-            line: lineNum,
-            type: "LOOP_ITERATION",
-            iteration: iter - startVal + 1,
-            maxIterations: maxIt - startVal,
-            progressPercent: Math.min(100, Math.round(((iter - startVal + 1) / (maxIt - startVal)) * 100)),
-            variableName: varName,
-            variableValue: iter,
-            conditionText: `${varName} < ${maxIt}`,
-          });
-
-          bodyLines.forEach((b) => executeSingleLine(b.lineText, b.lineNum, env));
-        }
-
-        idx = lookAhead - 1;
-        continue;
-      }
-
-      const whileMatch = line.match(/^while\s*\((.+)\)/);
-      if (whileMatch) {
-        const condStr = whileMatch[1];
-
-        // Collect block body lines enclosed in { ... }
-        const bodyLines: { lineText: string; lineNum: number }[] = [];
-        let lookAhead = idx + 1;
-        let depth = 0;
-        let foundBrace = false;
-
-        while (lookAhead < lines.length) {
-          const nextRaw = lines[lookAhead];
-          const nextTrim = nextRaw.trim();
-
-          if (nextTrim === "{") {
-            foundBrace = true;
-            depth++;
-          } else if (nextTrim === "}") {
-            depth--;
-            if (foundBrace && depth === 0) {
-              lookAhead++;
-              break;
-            }
-          } else if (nextTrim) {
-            bodyLines.push({ lineText: nextTrim, lineNum: lookAhead + 1 });
-          }
-          lookAhead++;
-        }
-
-        // Execute while iterations with explicit condition checking
-        let loopCount = 0;
-        const SAFETY_LIMIT = 50;
-
-        while (loopCount < SAFETY_LIMIT) {
-          const condDetails = parseConditionDetails(condStr, env);
-
-          events.push({
-            id: generateId(),
-            line: lineNum,
-            type: "CHECK_CONDITION",
-            condition: condDetails.conditionText,
-            left: condDetails.left,
-            operator: condDetails.op,
-            right: condDetails.right,
-            result: condDetails.result,
-            branchTaken: condDetails.result ? "then" : "else",
-          });
-
-          if (!condDetails.result) break;
-
-          loopCount++;
-          bodyLines.forEach((b) => executeSingleLine(b.lineText, b.lineNum, env));
-        }
-
-        idx = lookAhead - 1;
-        continue;
-      }
-    }
-
-    // Process regular single line
-    executeSingleLine(rawLine, lineNum, env);
-  }
+  const allLineItems = lines.map((lineText, i) => ({ lineText, lineNum: i + 1 }));
+  executeLinesRange(allLineItems, env);
 
   return events;
 }
