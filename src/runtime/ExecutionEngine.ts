@@ -25,13 +25,17 @@ export class ExecutionEngine {
         sourceType: "module",
         plugins: ["jsx", "typescript"],
         errorRecovery: true,
+        allowReturnOutsideFunction: true,
+        allowImportExportEverywhere: true,
       });
 
-      ast.program.body.forEach((stmt) => this.executeStatement(stmt));
+      if (ast?.program?.body) {
+        ast.program.body.forEach((stmt) => this.executeStatement(stmt));
+      }
 
       return this.ctx.getEvents();
     } catch (error) {
-      console.error("ExecutionEngine AST Error:", error);
+      // Gracefully return recorded events on syntax error
       return this.ctx.getEvents();
     }
   }

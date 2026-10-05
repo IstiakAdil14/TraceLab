@@ -20,10 +20,17 @@ const MAX_RECURSION_DEPTH = 30;
 export function parseCodeByLanguage(code: string, language: SupportedLanguage): RuntimeEvent[] {
   if (!code || !code.trim()) return [];
 
-  // For JavaScript, use the Babel AST ExecutionEngine
+  // For JavaScript, attempt Babel AST ExecutionEngine first
   if (language === "javascript") {
-    const jsEngine = new ExecutionEngine();
-    return jsEngine.execute(code);
+    try {
+      const jsEngine = new ExecutionEngine();
+      const jsEvents = jsEngine.execute(code);
+      if (jsEvents && jsEvents.length > 0) {
+        return jsEvents;
+      }
+    } catch (err) {
+      // Fallback to multi-language line parser
+    }
   }
 
   // Multi-language parser for Python, Java, C, C++
