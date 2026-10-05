@@ -1,9 +1,10 @@
 "use client";
 
 import Editor, { OnMount } from "@monaco-editor/react";
-import { FileCode, Settings2, BookOpen, Code2, Sparkles, Plus, Play, RotateCcw, Wand2 } from "lucide-react";
+import { FileCode, BookOpen, Wand2, Plus, Upload, FileCheck } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { parseCodeByLanguage } from "@/parser";
+import { parseJupyterNotebook } from "@/parser/ipynbParser";
 import { useExecutionStore } from "@/store/useExecutionStore";
 import { ALGORITHM_EXAMPLES } from "@/features/algorithms";
 import { SUPPORTED_LANGUAGES, SupportedLanguage, detectLanguageFromCode } from "@/types/languages";
@@ -16,17 +17,21 @@ export function EditorPanel({ externalCode }: EditorPanelProps) {
   const selectedLanguage = useExecutionStore((state) => state.selectedLanguage);
   const setSelectedLanguage = useExecutionStore((state) => state.setSelectedLanguage);
 
-  // selectedAlgo defaults to "" (Custom Code / User Input Mode)
   const [selectedAlgo, setSelectedAlgo] = useState<string>("");
   const [autoDetect, setAutoDetect] = useState<boolean>(true);
+  const [importedFileName, setImportedFileName] = useState<string | null>(null);
 
   const [code, setCode] = useState<string>(
     externalCode ||
-      `// Custom Code & User Inputs Mode
-let a = 10;
-let b = 20;
-let sum = a + b;
-let arr = [5, 2, 8, 1, 4];
+      `# Machine Learning & Code Execution Mode
+weight = 0.5
+bias = 0.1
+learning_rate = 0.01
+
+for epoch in range(1, 6):
+    loss = 2.5 / epoch
+    weight = weight + 0.15
+    bias = bias + 0.05
 `
   );
 
@@ -38,10 +43,10 @@ let arr = [5, 2, 8, 1, 4];
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
   const decorationsRef = useRef<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const activeLangInfo = SUPPORTED_LANGUAGES.find((l) => l.id === selectedLanguage) || SUPPORTED_LANGUAGES[0];
 
-  // Update code when external code prop changes (e.g. from Learning Mode)
   useEffect(() => {
     if (externalCode !== undefined) {
       setCode(externalCode);
@@ -51,16 +56,14 @@ let arr = [5, 2, 8, 1, 4];
     }
   }, [externalCode, setSelectedLanguage]);
 
-  // On Editor Mount callback
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
   };
 
-  // Handle Manual Language Selection
   const handleSelectLanguage = (langId: SupportedLanguage) => {
     setSelectedLanguage(langId);
-    setAutoDetect(false); // Locking language manually disables auto-detect override
+    setAutoDetect(false);
 
     const langInfo = SUPPORTED_LANGUAGES.find((l) => l.id === langId);
     if (selectedAlgo) {
@@ -73,9 +76,9 @@ let arr = [5, 2, 8, 1, 4];
     }
   };
 
-  // Handle Algorithm Example selection dropdown
   const handleSelectAlgorithm = (algoId: string) => {
     setSelectedAlgo(algoId);
+    setImportedFileName(null);
     if (!algoId) return;
 
     const found = ALGORITHM_EXAMPLES.find((ex) => ex.id === algoId);
@@ -88,17 +91,14 @@ let arr = [5, 2, 8, 1, 4];
     }
   };
 
-  // Handle user typing inside the Monaco editor (with Auto-Language Detection)
   const handleCodeChange = (newCode: string | undefined) => {
     const updated = newCode || "";
     setCode(updated);
 
-    // Revert to Custom Code / User Input Mode when user types code
     if (selectedAlgo !== "") {
       setSelectedAlgo("");
     }
 
-    // Perform Automatic Language Detection
     if (autoDetect && updated.trim()) {
       const detectedLang = detectLanguageFromCode(updated);
       if (detectedLang && detectedLang !== selectedLanguage) {
@@ -107,7 +107,33 @@ let arr = [5, 2, 8, 1, 4];
     }
   };
 
-  // Quick helper to insert variable snippet based on selected language
+  // Handle uploading Jupyter Notebook (.ipynb) or raw code files (.py, .c, .js, etc.)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportedFileName(file.name);
+    setSelectedAlgo("");
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const fileContent = evt.target?.result as string;
+      if (!fileContent) return;
+
+      if (file.name.endsWith(".ipynb")) {
+        const parsed = parseJupyterNotebook(fileContent);
+        setCode(parsed.code);
+        setSelectedLanguage("python");
+        setAutoDetect(false);
+      } else {
+        setCode(fileContent);
+        const detected = detectLanguageFromCode(fileContent);
+        if (detected) setSelectedLanguage(detected);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleInsertVariable = (type: "number" | "array" | "loop") => {
     let snippet = "";
     if (selectedLanguage === "javascript") {
@@ -137,13 +163,11 @@ let arr = [5, 2, 8, 1, 4];
     setSelectedAlgo("");
   };
 
-  // Auto-parse code into runtime events whenever code or language changes
   useEffect(() => {
     const parsedEvents = parseCodeByLanguage(code, selectedLanguage);
     useExecutionStore.getState().setEvents(parsedEvents);
   }, [code, selectedLanguage]);
 
-  // Handle active line highlighting when step index or events change
   useEffect(() => {
     if (!editorRef.current || !monacoRef.current) return;
 
@@ -176,7 +200,6 @@ let arr = [5, 2, 8, 1, 4];
     }
   }, [currentStepIndex, events]);
 
-  // Handle auto-play playback loop when isPlaying is true
   useEffect(() => {
     if (!isPlaying) return;
     const timer = setInterval(() => {
@@ -187,14 +210,33 @@ let arr = [5, 2, 8, 1, 4];
 
   return (
     <div className="flex flex-col h-full w-full bg-zinc-950 border-r border-zinc-800/80 overflow-hidden">
-      {/* Panel Header with Auto-Detect Badge, Language Selector & Algorithm Selector */}
+      {/* Hidden File Input for .ipynb and .py files */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept=".ipynb,.py,.c,.cpp,.java,.js"
+        className="hidden"
+      />
+
+      {/* Panel Header */}
       <div className="h-12 px-4 bg-zinc-900/90 border-b border-zinc-800/80 flex items-center justify-between shrink-0 gap-2">
         <div className="flex items-center gap-3 overflow-x-auto scrollbar-none py-1">
           {/* Active File Tab */}
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 font-mono font-semibold shrink-0">
             <FileCode className="h-3.5 w-3.5 text-indigo-400" />
-            <span>{activeLangInfo.filename}</span>
+            <span>{importedFileName || activeLangInfo.filename}</span>
           </div>
+
+          {/* Import .ipynb Notebook Button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 transition-all shrink-0 shadow-sm"
+            title="Import Jupyter Notebook (.ipynb) or Python script (.py)"
+          >
+            <Upload className="h-3.5 w-3.5 text-purple-400" />
+            <span>Import .ipynb / .py</span>
+          </button>
 
           {/* Auto-Detect Toggle Button */}
           <button
@@ -210,7 +252,7 @@ let arr = [5, 2, 8, 1, 4];
             <span>{autoDetect ? "Auto-Detect ON" : "Auto-Detect OFF"}</span>
           </button>
 
-          {/* 5 Language Selector Pills (Badge Only) */}
+          {/* 5 Language Selector Pills */}
           <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-xl border border-zinc-800/90 shrink-0">
             {SUPPORTED_LANGUAGES.map((lang) => {
               const isActive = lang.id === selectedLanguage;
@@ -237,7 +279,7 @@ let arr = [5, 2, 8, 1, 4];
             })}
           </div>
 
-          {/* Preset Algorithm Selection (Optional Template Loader) */}
+          {/* Preset Algorithm Selection */}
           <div className="flex items-center gap-1.5 bg-zinc-950 px-2.5 py-1 rounded-lg border border-purple-500/30 shrink-0">
             <BookOpen className="h-3.5 w-3.5 text-purple-400" />
             <select
@@ -260,7 +302,7 @@ let arr = [5, 2, 8, 1, 4];
           </div>
         </div>
 
-        {/* Quick Snippet Inserter Controls for User Input */}
+        {/* Quick Snippets & Line Badge */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => handleInsertVariable("array")}
@@ -268,13 +310,6 @@ let arr = [5, 2, 8, 1, 4];
             title="Insert Array Variable"
           >
             <Plus className="h-3 w-3 text-indigo-400" /> Array
-          </button>
-          <button
-            onClick={() => handleInsertVariable("number")}
-            className="hidden sm:flex items-center gap-1 text-[11px] bg-zinc-900 hover:bg-zinc-800 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-md font-mono transition-colors"
-            title="Insert Number Variable"
-          >
-            <Plus className="h-3 w-3 text-emerald-400" /> Var
           </button>
 
           {currentStepIndex >= 0 && events[currentStepIndex]?.line && (
