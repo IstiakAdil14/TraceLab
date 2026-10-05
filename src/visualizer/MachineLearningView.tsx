@@ -7,7 +7,20 @@ import { Brain, TrendingDown, Target, Zap, Activity, Cpu } from "lucide-react";
 export function MachineLearningView() {
   const { events, currentStepIndex } = useExecutionStore();
 
-  const currentEvent = events[currentStepIndex];
+  // Derive active variable memory state strictly up to currentStepIndex
+  const activeVariables: Record<string, any> = {};
+  if (currentStepIndex >= 0 && currentStepIndex < events.length) {
+    events.slice(0, currentStepIndex + 1).forEach((evt) => {
+      if (
+        evt.type === "CREATE_VARIABLE" ||
+        evt.type === "VARIABLE_CREATED" ||
+        evt.type === "UPDATE_VARIABLE" ||
+        evt.type === "VARIABLE_UPDATED"
+      ) {
+        activeVariables[(evt as any).name] = (evt as any).value;
+      }
+    });
+  }
 
   // Extract ML event data up to the current step
   const mlEvents = events.slice(0, currentStepIndex + 1).filter(
@@ -16,7 +29,7 @@ export function MachineLearningView() {
 
   const latestMlEvent = mlEvents[mlEvents.length - 1];
 
-  // Default sample dataset for Linear Regression visualization if no dynamic data provided
+  // Default sample dataset for Linear Regression visualization
   const samplePoints = [
     { x: 1, y: 2.1 },
     { x: 2, y: 3.9 },
@@ -25,17 +38,26 @@ export function MachineLearningView() {
     { x: 5, y: 9.8 },
   ];
 
-  // Get current epoch, weight, bias, loss
-  const epoch = latestMlEvent?.type === "ML_EPOCH" || latestMlEvent?.type === "ML_ITERATION" ? latestMlEvent.epoch : mlEvents.length;
-  const totalEpochs = latestMlEvent?.type === "ML_EPOCH" ? latestMlEvent.totalEpochs : 20;
-  const weight = latestMlEvent?.type === "ML_EPOCH" ? latestMlEvent.weight : 1.95;
-  const bias = latestMlEvent?.type === "ML_EPOCH" ? latestMlEvent.bias : 0.15;
-  const loss = latestMlEvent?.type === "ML_EPOCH" ? latestMlEvent.loss : Math.max(0.02, 2.5 / (epoch || 1));
+  // Calculate exact step-by-step values for epoch, weight, bias, loss
+  const epoch = typeof activeVariables["epoch"] === "number" ? activeVariables["epoch"] : (latestMlEvent?.type === "ML_EPOCH" ? latestMlEvent.epoch : 0);
+  const totalEpochs = 5;
+  const weight = typeof activeVariables["weight"] === "number" ? activeVariables["weight"] : (latestMlEvent?.type === "ML_EPOCH" ? latestMlEvent.weight : 0.5);
+  const bias = typeof activeVariables["bias"] === "number" ? activeVariables["bias"] : (latestMlEvent?.type === "ML_EPOCH" ? latestMlEvent.bias : 0.1);
+  const loss = typeof activeVariables["loss"] === "number" ? activeVariables["loss"] : (epoch > 0 ? 2.5 / epoch : 2.5);
 
-  // Extract loss history for mini loss graph
-  const lossHistory = mlEvents
-    .filter((e): e is MLEpochStep => e.type === "ML_EPOCH" || e.type === "ML_ITERATION")
-    .map((e) => e.loss);
+  // Collect step-by-step loss reduction history up to current step
+  const lossHistory: number[] = [];
+  if (currentStepIndex >= 0 && currentStepIndex < events.length) {
+    events.slice(0, currentStepIndex + 1).forEach((evt) => {
+      if (
+        (evt.type === "CREATE_VARIABLE" || evt.type === "UPDATE_VARIABLE") &&
+        (evt as any).name === "loss" &&
+        typeof (evt as any).value === "number"
+      ) {
+        lossHistory.push((evt as any).value);
+      }
+    });
+  }
 
   return (
     <div className="flex flex-col h-full w-full bg-slate-950 p-4 overflow-y-auto space-y-4">
@@ -47,13 +69,13 @@ export function MachineLearningView() {
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-              <span>Machine Learning & Gradient Descent Visualizer</span>
+              <span>Machine Learning Step-by-Step Visualizer</span>
               <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-semibold border border-purple-500/30 uppercase tracking-wider">
-                ML Engine
+                Step {currentStepIndex + 1}
               </span>
             </h3>
             <p className="text-[11px] text-slate-400">
-              Real-time model parameter optimization, weight updates & loss reduction tracking
+              Live step-by-step weight updates, gradient descent line rotation & loss reduction
             </p>
           </div>
         </div>
@@ -107,9 +129,9 @@ export function MachineLearningView() {
         <div className="flex items-center justify-between text-xs font-semibold text-slate-300 mb-2">
           <span className="flex items-center gap-1.5 text-purple-400">
             <Cpu className="w-4 h-4" />
-            Linear Regression Model Fit: <code className="text-amber-300 font-mono">y = {weight.toFixed(2)}x + {bias.toFixed(2)}</code>
+            Active Step Fit: <code className="text-amber-300 font-mono">y = {weight.toFixed(2)}x + {bias.toFixed(2)}</code>
           </span>
-          <span className="text-[10px] text-slate-500 font-normal">2D Feature Coordinate Space</span>
+          <span className="text-[10px] text-slate-500 font-normal">Step-by-Step Vector Space</span>
         </div>
 
         {/* 2D Canvas SVG Plot */}
@@ -119,7 +141,7 @@ export function MachineLearningView() {
             <line x1="30" y1="130" x2="280" y2="130" stroke="#334155" strokeWidth="1.5" strokeDasharray="3,3" />
             <line x1="30" y1="10" x2="30" y2="130" stroke="#334155" strokeWidth="1.5" strokeDasharray="3,3" />
 
-            {/* Regression Line y = wx + b */}
+            {/* Step-by-step Regression Line y = wx + b */}
             {(() => {
               const x1 = 1;
               const y1 = weight * x1 + bias;
@@ -139,8 +161,8 @@ export function MachineLearningView() {
                   x2={svgX2}
                   y2={svgY2}
                   stroke="#c084fc"
-                  strokeWidth="3"
-                  className="transition-all duration-300 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]"
+                  strokeWidth="3.5"
+                  className="transition-all duration-300 ease-out drop-shadow-[0_0_10px_rgba(192,132,252,0.9)]"
                 />
               );
             })()}
@@ -154,7 +176,7 @@ export function MachineLearningView() {
 
               return (
                 <g key={idx}>
-                  {/* Error Residual Line */}
+                  {/* Step Error Residual Line */}
                   <line
                     x1={cx}
                     y1={cy}
@@ -163,7 +185,7 @@ export function MachineLearningView() {
                     stroke="#f43f5e"
                     strokeWidth="1.5"
                     strokeDasharray="2,2"
-                    className="opacity-70"
+                    className="opacity-70 transition-all duration-300"
                   />
                   {/* Data Point Dot */}
                   <circle
@@ -178,24 +200,24 @@ export function MachineLearningView() {
           </svg>
         </div>
 
-        {/* Mini Loss Reduction Graph */}
+        {/* Step-by-step Loss Reduction History */}
         <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between text-xs">
           <div className="text-slate-400 text-[11px]">
-            Loss Reduction History:
+            Step Loss Reduction Progress:
           </div>
           <div className="flex items-center gap-1.5">
             {lossHistory.length > 0 ? (
               lossHistory.slice(-8).map((l, idx) => (
                 <div key={idx} className="flex flex-col items-center gap-1">
                   <div
-                    className="w-2.5 rounded-t bg-gradient-to-t from-purple-600 to-rose-400 transition-all"
-                    style={{ height: `${Math.min(30, Math.max(4, l * 15))}px` }}
+                    className="w-3 rounded-t bg-gradient-to-t from-purple-600 to-rose-400 transition-all duration-300"
+                    style={{ height: `${Math.min(32, Math.max(4, l * 12))}px` }}
                   />
-                  <span className="text-[9px] text-slate-500">{idx + 1}</span>
+                  <span className="text-[9px] text-slate-500 font-mono">E{idx + 1}</span>
                 </div>
               ))
             ) : (
-              <span className="text-slate-500 text-[11px] font-mono">Convergence Stable (MSE Loss: {loss.toFixed(4)})</span>
+              <span className="text-slate-500 text-[11px] font-mono">Initial Step (Loss: {loss.toFixed(4)})</span>
             )}
           </div>
         </div>
