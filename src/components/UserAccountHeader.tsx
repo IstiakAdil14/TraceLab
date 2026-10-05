@@ -36,6 +36,7 @@ export function UserAccountHeader() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [progressData, setProgressData] = useState<UserProgressData | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -86,12 +87,14 @@ export function UserAccountHeader() {
             onClick={() => setShowProfileModal(true)}
             className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-all text-xs text-slate-200 font-medium group"
           >
-            {session.user.image ? (
+            {session.user.image && !imgError ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={session.user.image}
                 alt={session.user.name || "User"}
-                className="w-6 h-6 rounded-full border border-indigo-500/50"
+                referrerPolicy="no-referrer"
+                onError={() => setImgError(true)}
+                className="w-6 h-6 rounded-full border border-indigo-500/50 object-cover"
               />
             ) : (
               <div className="w-6 h-6 rounded-full bg-indigo-600/30 text-indigo-300 flex items-center justify-center font-bold text-[10px] border border-indigo-500/40">
@@ -203,15 +206,17 @@ export function UserAccountHeader() {
 
               {/* Profile Header */}
               <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-800">
-                {session.user.image ? (
+                {session.user.image && !imgError ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={session.user.image}
                     alt={session.user.name || "User"}
-                    className="w-14 h-14 rounded-full border-2 border-indigo-500"
+                    referrerPolicy="no-referrer"
+                    onError={() => setImgError(true)}
+                    className="w-14 h-14 rounded-full border-2 border-indigo-500 object-cover shadow-md"
                   />
                 ) : (
-                  <div className="w-14 h-14 rounded-full bg-indigo-600/30 text-indigo-300 flex items-center justify-center font-bold text-xl border-2 border-indigo-500">
+                  <div className="w-14 h-14 rounded-full bg-indigo-600/30 text-indigo-300 flex items-center justify-center font-bold text-xl border-2 border-indigo-500 shadow-md">
                     {session.user.name?.[0]?.toUpperCase() || "U"}
                   </div>
                 )}
